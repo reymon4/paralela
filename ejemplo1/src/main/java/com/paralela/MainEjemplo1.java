@@ -1,222 +1,225 @@
 package com.paralela;
 
-import org.lwjgl.*;
-import org.lwjgl.glfw.*;
-import org.lwjgl.opengl.*;
-import org.lwjgl.system.*;
+import org.lwjgl.Version;
+import org.lwjgl.glfw.GLFWErrorCallback;
+import org.lwjgl.glfw.GLFWVidMode;
+import org.lwjgl.opengl.GL;
 
-import javax.imageio.ImageIO;
-import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.FloatBuffer;
-
-import static org.lwjgl.glfw.Callbacks.*;
 import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.opengl.GL11.*;
-import static org.lwjgl.system.MemoryStack.*;
-import static org.lwjgl.system.MemoryUtil.*;
+import static org.lwjgl.system.MemoryUtil.NULL;
 
 class MainEjemplo1 {
     private static long window;
+    static int textureID;
 
-    static void run(){
-        System.out.println("Hello LWJGL " + Version.getVersion() + "!");
+    static void run() {
+        System.out.println("LWJGL " + Version.getVersion());
+
         init();
+
         loop();
     }
 
-    static void init(){
+    static void init() {
         GLFWErrorCallback.createPrint(System.err).set();
 
-        if ( !glfwInit() )
+        if (!glfwInit())
             throw new IllegalStateException("Unable to initialize GLFW");
 
-
         // Configure GLFW
-        glfwDefaultWindowHints(); // optional, the current window hints are already the default
-        glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE); // the window will stay hidden after creation
-        glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE); // the window will be resizable
+        glfwDefaultWindowHints();
+        glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
+        glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 
         // Create the window
-        window = glfwCreateWindow(800, 600, "TEST PURPLE", NULL, NULL);
+        window = glfwCreateWindow(Params.WIDTH, Params.HEIGHT, "Test", NULL, NULL);
 
-        if ( window == NULL )
+        if (window == NULL)
             throw new RuntimeException("Failed to create the GLFW window");
+
+        // Setup a key callback. It will be called every time a key is pressed, repeated or released.
+        glfwSetKeyCallback(window, (window, key, scancode, action, mods) -> {
+            if (key == GLFW_KEY_ESCAPE && action == GLFW_RELEASE)
+                glfwSetWindowShouldClose(window, true);
+        });
+
+        glfwSetFramebufferSizeCallback(window, (window, width, height) -> {
+            glViewport(0, 0, width, height);
+        });
+
+        {
+            // centrar ventana
+            GLFWVidMode vidmode = glfwGetVideoMode(glfwGetPrimaryMonitor());
+            glfwSetWindowPos(
+                    window,
+                    (vidmode.width() - Params.WIDTH) / 2,
+                    (vidmode.height() - Params.HEIGHT) / 2
+            );
+        }
 
         // Make the OpenGL context current
         glfwMakeContextCurrent(window);
 
-        // Setup a key callback. It will be called every time a key is pressed, repeated or released.
-        glfwSetKeyCallback(window, (window, key, scancode, action, mods) -> {
-            if ( key == GLFW_KEY_ESCAPE && action == GLFW_RELEASE )
-                glfwSetWindowShouldClose(window, true); // We will detect this in the rendering loop
-        });
-        glfwSetFramebufferSizeCallback(window, (window, width, height)->{
-            glViewport(0,0,width,height);
-        });
-
-        // Get the resolution of the primary monitor
-        GLFWVidMode vidmode = glfwGetVideoMode(glfwGetPrimaryMonitor());
-
-        // Center the window
-        glfwSetWindowPos(
-                window,
-                (vidmode.width() - 800) / 2,
-                (vidmode.height() - 600) / 2
-        );
-
         GL.createCapabilities();
 
-        String version = GL11.glGetString(GL11.GL_VERSION);
-        String vendor = GL11.glGetString(GL11.GL_VENDOR);
-        String renderer =  GL11.glGetString(GL11.GL_RENDERER);
+        String version = glGetString(GL_VERSION);
+        String vendor = glGetString(GL_VENDOR);
+        String renderer = glGetString(GL_RENDERER);
 
         System.out.println("OpenGL version: " + version);
         System.out.println("OpenGL vendor: " + vendor);
         System.out.println("OpenGL renderer: " + renderer);
 
-        //INDICAMOS QUE VAMOS A USAR PROYECCIONES
         glMatrixMode(GL_PROJECTION);
         glLoadIdentity();
-        glOrtho(-2,2,-2,2,-2,2);
+        glOrtho(-1, 1, -1, 1, -1, 1);
+
         glMatrixMode(GL_MODELVIEW);
         glLoadIdentity();
+
+        glEnable(GL_TEXTURE_2D);
 
         // Enable v-sync
         glfwSwapInterval(1);
 
         // Make the window visible
         glfwShowWindow(window);
+
+        initTexteures();
     }
 
-    static void loop(){
-        glClearColor(0f, 0.0f, 0f, 0.86f);
+    static void initTexteures() {
+        textureID = glGenTextures();
 
+        glBindTexture(GL_TEXTURE_2D, textureID);
 
-        // Run the rendering loop until the user has attempted to close
-        // the window or has pressed the ESCAPE key.
-        while ( !glfwWindowShouldClose(window) ) {
-            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // clear the framebuffer
-            draw("2");
-            glfwSwapBuffers(window); // swap the color buffers
+        glTexImage2D(GL_TEXTURE_2D,
+                0,
+                GL_RGBA8,
+                Params.WIDTH, Params.HEIGHT, 0,
+                GL_RGBA,
+                GL_UNSIGNED_BYTE,
+                NULL
+        );
 
-            // Poll for window events. The key callback above will only be
-            // invoked during this call.
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+        glBindTexture(GL_TEXTURE_2D, 0);
+    }
+
+    static void loop() {
+        glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+
+        while (!glfwWindowShouldClose(window)) {
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+            paint();
+
+            glfwSwapBuffers(window);
+
             glfwPollEvents();
         }
-
-    }
-    public static void main(String[] args) {
-
-        run();
-        //String version = GL11.glGetString(GL11.GL_VERSION);
-        //System.out.println("OpenGL Version:" + version);
-    }
-    static void draw(String figura){
-        switch (figura){
-            case "1":
-                drawTriangle();
-                break;
-            case "2":
-                drawQuad();
-                break;
-        }
-    }
-    static void drawTriangle(){
-        glBegin(GL_TRIANGLES);
-        {
-            glVertex2d(-1,-1);
-            glVertex2d(0,0);
-            glVertex2d(0,-1);
-        }
-        glEnd();
-
-    }
-    static void drawQuad(){
-        int textureID = loadTexture("ejemplo1/src/main/resources/textura_roca.png");
-
-        float[] vertices = {
-                -1.0f, -1.0f, 0.0f,
-                -1.0f,  1.0f, 0.0f,
-                1.0f,  1.0f, 0.0f,
-                1.0f, -1.0f, 0.0f
-        };
-
-        float[] texCoords = {
-                0.0f, 0.0f,
-                0.0f, 1.0f,
-                1.0f, 1.0f,
-                1.0f, 0.0f
-        };
-        GL11.glEnable(GL11.GL_TEXTURE_2D);
-
-        GL11.glBindTexture(GL11.GL_TEXTURE_2D, textureID);
-
-        GL11.glEnableClientState(GL11.GL_VERTEX_ARRAY);
-        GL11.glEnableClientState(GL11.GL_TEXTURE_COORD_ARRAY);
-
-        FloatBuffer vertexBuffer = MemoryUtil.memAllocFloat(vertices.length);
-        vertexBuffer.put(vertices).flip();
-        GL11.glVertexPointer(3, GL11.GL_FLOAT, 0, vertexBuffer);
-
-        FloatBuffer texCoordBuffer = MemoryUtil.memAllocFloat(texCoords.length);
-        texCoordBuffer.put(texCoords).flip();
-        GL11.glTexCoordPointer(2, GL11.GL_FLOAT, 0, texCoordBuffer);
-
-        GL11.glDrawArrays(GL11.GL_QUADS, 0, 4);
-
-        GL11.glDisableClientState(GL11.GL_TEXTURE_COORD_ARRAY);
-        GL11.glDisableClientState(GL11.GL_VERTEX_ARRAY);
-
-        GL11.glBindTexture(GL11.GL_TEXTURE_2D, 0);
-
-        MemoryUtil.memFree(vertexBuffer);
-        MemoryUtil.memFree(texCoordBuffer);
-
-
     }
 
-    //Método para cargar texturas
-    static int loadTexture(String path) {
-        BufferedImage image;
-        try {
-            image = ImageIO.read(new File(path));
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to load texture", e);
-        }
 
-        int width = image.getWidth();
-        int height = image.getHeight();
-        int[] pixels = new int[width * height];
-        image.getRGB(0, 0, width, height, pixels, 0, width);
+    //--------------------------------------------------------------------------------
+    static int pixel_buffer[] = new int[Params.WIDTH * Params.HEIGHT]; // size= WIDTHxHEIGHT
 
-        ByteBuffer buffer = MemoryUtil.memAlloc(width * height * 4);
-        for (int y = 0; y < height; y++) {
-            for (int x = 0; x < width; x++) {
-                int pixel = pixels[y * width + x];
-                buffer.put((byte) ((pixel >> 16) & 0xFF)); // Red
-                buffer.put((byte) ((pixel >> 8) & 0xFF));  // Green
-                buffer.put((byte) (pixel & 0xFF));         // Blue
-                buffer.put((byte) ((pixel >> 24) & 0xFF)); // Alpha
+    static void mandelbrotCpu() {
+        int maxIterations = 2;
+        double escapeRadius = 2.0;
+        double escapeRadiusSquared = escapeRadius * escapeRadius;
+
+        double scaleX = (Params.xMax - Params.xMin) / Params.WIDTH;
+        double scaleY = (Params.yMax - Params.yMin) / Params.HEIGHT;
+
+        for (int px = 0; px < Params.WIDTH; px++) {
+            for (int py = 0; py < Params.HEIGHT; py++) {
+                // Mapear píxel (px, py) al plano complejo
+                double cReal = Params.xMin + px * scaleX;
+                double cImag = Params.yMin + py * scaleY;
+
+                // Inicializar z = 0 en el plano complejo
+                double zReal = 0.0, zImag = 0.0;
+                int iteration = 0;
+
+                // Aplicar la fórmula iterativa: z_{n+1} = z_n^2 + c
+                while (iteration < maxIterations) {
+                    double zRealSquared = zReal * zReal;
+                    double zImagSquared = zImag * zImag;
+
+                    if (zRealSquared + zImagSquared > escapeRadiusSquared) {
+                        break;
+                    }
+                    double zRealTemp = zRealSquared - zImagSquared + cReal;
+                    zImag = 2.0 * zReal * zImag + cImag;
+                    zReal = zRealTemp;
+
+                    iteration++;
+                }
+
+                // Determinar el color: negro si no escapa, blanco si escapa
+                int color = (iteration == maxIterations) ? 0x000000 : 0xFFFFFF;
+
+                // Almacenar el color en el buffer de píxeles
+                pixel_buffer[py * Params.WIDTH + px] = color;
             }
         }
-        buffer.flip();
 
-        int textureID = GL11.glGenTextures();
-        GL11.glBindTexture(GL11.GL_TEXTURE_2D, textureID);
+        //dibujar
+        glEnable(GL_TEXTURE_2D);
+        glBindTexture(GL_TEXTURE_2D, textureID);
+        glTexImage2D(GL_TEXTURE_2D,
+                0,
+                GL_RGBA,
+                Params.WIDTH, Params.HEIGHT, 0,
+                GL_RGBA,
+                GL_UNSIGNED_BYTE,
+                pixel_buffer);
 
-        GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_NEAREST);
-        GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_NEAREST);
+        glBegin(GL_QUADS);
+        {
+            glTexCoord2f(0, 1);
+            glVertex3f(-1, -1, 0);
 
-        GL11.glTexImage2D(GL11.GL_TEXTURE_2D, 0, GL11.GL_RGBA, width, height, 0, GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, buffer);
+            glTexCoord2f(0, 0);
+            glVertex3f(-1, 1, 0);
 
-        GL11.glBindTexture(GL11.GL_TEXTURE_2D, 0);
+            glTexCoord2f(1, 0);
+            glVertex3f(1, 1, 0);
 
-        MemoryUtil.memFree(buffer);
-
-        return textureID;
+            glTexCoord2f(1, 1);
+            glVertex3f(1, -1, 0);
+        }
+        glEnd();
     }
 
+    //Método para obtener los colores
+    static int getColor(int iteration, int maxIterations) {
+        float t = (float) iteration / maxIterations;
+        int r = (int) (9 * (1 - t) * t * t * t * 255);
+        int g = (int) (15 * (1 - t) * (1 - t) * t * t * 255);
+        int b = (int) (8.5 * (1 - t) * (1 - t) * (1 - t) * t * 255);
+
+        return (r << 16) | (g << 8) | b; // Color in RGB
+    }
+    //--------------------------------------------------------------------------------
+
+    static void paint() {
+        mandelbrotCpu();
+
+//        glBegin(GL_TRIANGLES);
+//        {
+//            glVertex2d(-1, -1);
+//            glVertex2d(0, 0);
+//            glVertex2d(0, -1);
+//        }
+//        glEnd();
+    }
+
+    public static void main(String[] args) {
+        run();
+    }
 }
