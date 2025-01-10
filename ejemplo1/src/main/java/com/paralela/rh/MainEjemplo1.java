@@ -1,4 +1,4 @@
-package com.paralela;
+package com.paralela.rh;
 
 import org.lwjgl.Version;
 import org.lwjgl.glfw.GLFWErrorCallback;
@@ -13,6 +13,7 @@ class MainEjemplo1 {
     private static long window;
     static int textureID;
 
+    static FPSCounter fpsCounter = new FPSCounter();
     static void run() {
         System.out.println("LWJGL " + Version.getVersion());
 
@@ -128,7 +129,7 @@ class MainEjemplo1 {
     static int pixel_buffer[] = new int[Params.WIDTH * Params.HEIGHT]; // size= WIDTHxHEIGHT
 
     static void mandelbrotCpu() {
-        int maxIterations = 2;
+        int maxIterations = 100;
         double escapeRadius = 2.0;
         double escapeRadiusSquared = escapeRadius * escapeRadius;
 
@@ -161,7 +162,10 @@ class MainEjemplo1 {
                 }
 
                 // Determinar el color: negro si no escapa, blanco si escapa
-                int color = (iteration == maxIterations) ? 0x000000 : 0xFFFFFF;
+               // int color = (iteration == maxIterations) ? 0x000000 : 0xFFFFFF;
+                //int color = getColor(iteration,maxIterations);
+                int color = (iteration == maxIterations)? 0x000000 : Params.color_ramp[iteration%Params.PALETTE_SIZE];
+
 
                 // Almacenar el color en el buffer de píxeles
                 pixel_buffer[py * Params.WIDTH + px] = color;
@@ -208,6 +212,7 @@ class MainEjemplo1 {
     //--------------------------------------------------------------------------------
 
     static void paint() {
+        fpsCounter.update();
         mandelbrotCpu();
 
 //        glBegin(GL_TRIANGLES);

@@ -9,12 +9,9 @@
           <set>
             <option value="$PROJECT_DIR$" />
             <option value="$PROJECT_DIR$/ejemplo1" />
+            <option value="$PROJECT_DIR$/fractal-client-dll" />
           </set>
         </option>
-      </GradleProjectSettings>
-      <GradleProjectSettings>
-        <option name="externalProjectPath" value="$PROJECT_DIR$/ejemplo1" />
-        <option name="gradleJvm" value="22 (2)" />
       </GradleProjectSettings>
     </option>
   </component>
